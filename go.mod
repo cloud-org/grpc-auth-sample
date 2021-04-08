@@ -4,6 +4,6 @@ go 1.16
 
 require (
 	github.com/golang/protobuf v1.5.2
-	golang.org/x/net v0.0.0-20190311183353-d8887717615a
+	github.com/stretchr/testify v1.5.1
 	google.golang.org/grpc v1.36.1
 )

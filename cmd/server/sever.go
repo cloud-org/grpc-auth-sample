@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"net"
 
 	pb "grpc-sample/proto"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials" // 引入 grpc 认证包
 	"google.golang.org/grpc/grpclog"
@@ -25,10 +28,40 @@ var HelloService = helloService{}
 
 // SayHello 实现 Hello 服务接口
 func (h helloService) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloResponse, error) {
+	err := Check(ctx)
+	if err != nil {
+		return nil, err
+	}
 	resp := new(pb.HelloResponse)
 	resp.Message = fmt.Sprintf("Hello %s.", in.Name)
 
 	return resp, nil
+}
+
+func Check(ctx context.Context) error {
+	//从上下文中获取元数据
+	md, ok := metadata.FromIncomingContext(ctx)
+	grpclog.Infof("md is %+v\n", md)
+	if !ok {
+		return status.Errorf(codes.Unauthenticated, "获取 Token 失败")
+	}
+	var (
+		appKey    string
+		secretKey string
+	)
+	if value, ok := md["app_key"]; ok {
+		appKey = value[0]
+	}
+	if value, ok := md["secret_key"]; ok {
+		secretKey = value[0]
+	}
+
+	if len(appKey) != 16 || len(secretKey) != 32 {
+		return status.Errorf(codes.Unauthenticated, "Token err")
+	}
+
+	grpclog.Infof("auth is %v, %v\n", appKey, secretKey)
+	return nil
 }
 
 func main() {
