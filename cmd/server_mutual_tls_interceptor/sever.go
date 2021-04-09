@@ -73,7 +73,7 @@ func main() {
 	interceptor := getInterceptor()
 	creds := getCreds(err)
 	// 实例化 grpc Server, 并开启 TLS 认证
-	s := grpc.NewServer(grpc.Creds(creds), grpc.UnaryInterceptor(interceptor))
+	s := grpc.NewServer(grpc.Creds(creds), grpc.ChainUnaryInterceptor(interceptor...))
 
 	// 注册 HelloService
 	pb.RegisterHelloServer(s, HelloService)
@@ -84,7 +84,7 @@ func main() {
 }
 
 //getInterceptor 添加拦截器
-func getInterceptor() grpc.UnaryServerInterceptor {
+func getInterceptor() []grpc.UnaryServerInterceptor {
 	interceptor := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		//拦截普通方法请求，验证 Token
 		//req proto.HelloRequest
@@ -97,7 +97,12 @@ func getInterceptor() grpc.UnaryServerInterceptor {
 		// 继续处理请求
 		return handler(ctx, req)
 	}
-	return interceptor
+	interceptor1 := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		grpclog.Infoln(info.FullMethod)
+		// 继续处理请求
+		return handler(ctx, req)
+	}
+	return []grpc.UnaryServerInterceptor{interceptor, interceptor1}
 }
 
 //getCreds 添加凭证
